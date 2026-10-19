@@ -1,3 +1,15 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
+val openWeatherApiKey = localProperties.getProperty("OPENWEATHER_API_KEY", "")
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 plugins {
     alias(libs.plugins.android.application)
 }
@@ -16,6 +28,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Keep the key in local.properties so it is never committed to source control.
+        buildConfigField("String", "OPENWEATHER_API_KEY", "\"$openWeatherApiKey\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
