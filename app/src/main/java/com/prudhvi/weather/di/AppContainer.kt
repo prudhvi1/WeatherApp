@@ -1,5 +1,7 @@
 package com.prudhvi.weather.di
 
+import com.prudhvi.weather.data.WeatherRepository
+import com.prudhvi.weather.data.remote.GeocodingApiService
 import com.prudhvi.weather.data.remote.WeatherApiService
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -20,6 +22,18 @@ class AppContainer(
 ) {
     val weatherApiService: WeatherApiService by lazy {
         retrofit.create(WeatherApiService::class.java)
+    }
+
+    val geocodingApiService: GeocodingApiService by lazy {
+        retrofit.create(GeocodingApiService::class.java)
+    }
+
+    val weatherRepository: WeatherRepository by lazy {
+        WeatherRepository(
+            weatherApiService = weatherApiService,
+            geocodingApiService = geocodingApiService,
+            apiKey = apiKey
+        )
     }
 
     private companion object {
