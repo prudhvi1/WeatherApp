@@ -42,7 +42,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":app"))
+    implementation(project(":AndroidUILibrary"))
     implementation(project(":shared"))
 
     implementation(platform(libs.androidx.compose.bom))

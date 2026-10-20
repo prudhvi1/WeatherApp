@@ -23,7 +23,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "WeatherWhiteLabelAgent"
-include(":app")
+include(":AndroidUILibrary")
 include(":shared")
 include(":WeatherAppA")
  
