@@ -1,6 +1,8 @@
 package com.prudhvi.weather.di
 
+import android.content.Context
 import com.prudhvi.weather.data.WeatherRepository
+import com.prudhvi.weather.data.local.WeatherPreferences
 import com.prudhvi.weather.data.remote.GeocodingApiService
 import com.prudhvi.weather.data.remote.WeatherApiService
 import retrofit2.Retrofit
@@ -14,12 +16,17 @@ import retrofit2.converter.gson.GsonConverterFactory
  * ViewModels.
  */
 class AppContainer(
+    context: Context,
     val apiKey: String,
     private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 ) {
+    val weatherPreferences: WeatherPreferences by lazy {
+        WeatherPreferences(context)
+    }
+
     val weatherApiService: WeatherApiService by lazy {
         retrofit.create(WeatherApiService::class.java)
     }

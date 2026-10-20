@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prudhvi.weather.data.CityNotFoundException
 import com.prudhvi.weather.data.WeatherRepository
+import com.prudhvi.weather.data.local.WeatherPreferences
 import com.prudhvi.weather.data.remote.model.WeatherResponse
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
@@ -17,6 +19,7 @@ sealed interface WeatherUiState {
     data object Loading : WeatherUiState
 
     data class Success(
+        val city: String,
         val weather: WeatherResponse
     ) : WeatherUiState
 
@@ -26,13 +29,16 @@ sealed interface WeatherUiState {
 }
 
 class WeatherViewModel(
-    private val repository: WeatherRepository
+    private val repository: WeatherRepository,
+    private val weatherPreferences: WeatherPreferences
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
 
     init {
-        search()
+        viewModelScope.launch {
+            search(weatherPreferences.lastCity.first() ?: DEFAULT_CITY)
+        }
     }
 
     fun search(city: String = DEFAULT_CITY) {
@@ -47,7 +53,11 @@ class WeatherViewModel(
 
             try {
                 val weather = repository.getWeatherForCity(normalizedCity)
-                _uiState.value = WeatherUiState.Success(weather)
+                weatherPreferences.saveLastCity(normalizedCity)
+                _uiState.value = WeatherUiState.Success(
+                    city = normalizedCity,
+                    weather = weather
+                )
             } catch (exception: CityNotFoundException) {
                 Log.w(TAG, "No geocoding result for city: $normalizedCity")
                 _uiState.value = WeatherUiState.Error("We could not find that city")

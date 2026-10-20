@@ -11,9 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -23,7 +24,13 @@ fun WeatherScreen(
     uiState: WeatherUiState,
     onSearch: (String) -> Unit
 ) {
-    var city by remember { mutableStateOf("Chicago") }
+    var city by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(uiState) {
+        if (uiState is WeatherUiState.Success) {
+            city = uiState.city
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -65,9 +72,12 @@ fun WeatherScreen(
                 val response = state.weather
                 val condition = response.weather.firstOrNull()
                 Text(response.name, style = MaterialTheme.typography.headlineSmall)
-                Text("${response.main.temp.toInt()}°F")
-                Text(condition?.description.orEmpty().replaceFirstChar { it.uppercase() })
-                Text("Feels like ${response.main.feels_like.toInt()}°F")
+                Text(WeatherFormatting.formatTemperature(response.main.temp))
+                Text(WeatherFormatting.formatCondition(condition?.description))
+                Text(
+                    "Feels like " +
+                        WeatherFormatting.formatTemperature(response.main.feels_like)
+                )
                 Text("Humidity ${response.main.humidity}%")
             }
         }

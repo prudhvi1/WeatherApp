@@ -12,7 +12,10 @@ import com.prudhvi.weather.presentation.weather.WeatherViewModelFactory
 class MainActivity : ComponentActivity() {
     private val weatherViewModel: WeatherViewModel by viewModels {
         val container = (application as WeatherApplication).appContainer
-        WeatherViewModelFactory(container.weatherRepository)
+        WeatherViewModelFactory(
+            repository = container.weatherRepository,
+            weatherPreferences = container.weatherPreferences
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
