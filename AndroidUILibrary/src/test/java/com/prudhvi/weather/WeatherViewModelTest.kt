@@ -1,6 +1,5 @@
 package com.prudhvi.weather
 
-import com.prudhvi.weather.data.WeatherRepository
 import com.prudhvi.weather.presentation.weather.WeatherUiState
 import com.prudhvi.weather.presentation.weather.WeatherViewModel
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +49,7 @@ class WeatherViewModelTest {
     @Test
     fun emitsErrorForUnknownCity() = runTest {
         val preferences = FakeWeatherPreferences()
-        val viewModel = createViewModel(preferences, locations = emptyList())
+        val viewModel = createViewModel(preferences, locations = emptySet())
 
         advanceUntilIdle()
 
@@ -63,26 +62,16 @@ class WeatherViewModelTest {
     @Test
     fun loadsPersistedCityOnStartup() = runTest {
         val preferences = FakeWeatherPreferences("Bloomington")
-        val geocoding = FakeGeocodingApiService(
-            locations = listOf(
-                com.prudhvi.weather.data.remote.model.GeocodingLocation(
-                    "Bloomington", 40.48, -88.99, "US", "Illinois"
-                )
-            )
-        )
+        val repository = FakeWeatherRepository(locations = setOf("Bloomington"))
         val viewModel = WeatherViewModel(
-            repository = WeatherRepository(
-                FakeWeatherApiService(weatherResponse("Bloomington")),
-                geocoding,
-                "test-key"
-            ),
+            repository = repository,
             weatherPreferences = preferences,
             locationProvider = FakeCurrentLocationProvider()
         )
 
         advanceUntilIdle()
 
-        assertEquals("Bloomington", geocoding.lastQuery)
+        assertEquals("Bloomington", repository.lastQuery)
         assertTrue(viewModel.uiState.value is WeatherUiState.Success)
     }
 
@@ -105,11 +94,7 @@ class WeatherViewModelTest {
     fun handlesLocationPermissionError() = runTest {
         val preferences = FakeWeatherPreferences()
         val viewModel = WeatherViewModel(
-            repository = WeatherRepository(
-                FakeWeatherApiService(),
-                FakeGeocodingApiService(),
-                "test-key"
-            ),
+            repository = FakeWeatherRepository(),
             weatherPreferences = preferences,
             locationProvider = FakeCurrentLocationProvider(
                 failure = com.prudhvi.weather.data.location.LocationPermissionException()
@@ -129,17 +114,9 @@ class WeatherViewModelTest {
 
     private fun createViewModel(
         preferences: FakeWeatherPreferences,
-        locations: List<com.prudhvi.weather.data.remote.model.GeocodingLocation> = listOf(
-            com.prudhvi.weather.data.remote.model.GeocodingLocation(
-                "Chicago", 41.88, -87.63, "US", "Illinois"
-            )
-        )
+        locations: Set<String> = setOf("Chicago", "New York")
     ): WeatherViewModel = WeatherViewModel(
-        repository = WeatherRepository(
-            FakeWeatherApiService(),
-            FakeGeocodingApiService(locations = locations),
-            "test-key"
-        ),
+        repository = FakeWeatherRepository(locations = locations),
         weatherPreferences = preferences,
         locationProvider = FakeCurrentLocationProvider()
     )

@@ -1,13 +1,33 @@
 package com.prudhvi.weather.shared.agent
 
+import com.prudhvi.weather.shared.models.WeatherResult
+import com.prudhvi.weather.shared.models.WeatherSnapshot
+import com.prudhvi.weather.shared.weather.GetClothingRecommendation
+import com.prudhvi.weather.shared.weather.GetWeatherForCity
+import com.prudhvi.weather.shared.weather.GetWeatherForCurrentLocation
 import com.prudhvi.weather.shared.weather.WeatherRepository
-import com.prudhvi.weather.shared.weather.WeatherResult
-import com.prudhvi.weather.shared.weather.WeatherSnapshot
 
+/**
+ * Shared natural-language weather behavior. Platform code supplies the repository
+ * and optional device capabilities; all weather decisions stay in commonMain.
+ */
 class WeatherAgentEngine(
-    private val weatherRepository: WeatherRepository,
+    private val getWeatherForCity: GetWeatherForCity,
+    private val getWeatherForCurrentLocation: GetWeatherForCurrentLocation,
+    private val getClothingRecommendation: GetClothingRecommendation = GetClothingRecommendation(),
     private val deviceCapabilities: DeviceCapabilities? = null
 ) : WeatherAgent {
+
+    /** Convenience constructor retained for clients that provide a repository directly. */
+    constructor(
+        weatherRepository: WeatherRepository,
+        deviceCapabilities: DeviceCapabilities? = null
+    ) : this(
+        getWeatherForCity = GetWeatherForCity(weatherRepository),
+        getWeatherForCurrentLocation = GetWeatherForCurrentLocation(weatherRepository),
+        getClothingRecommendation = GetClothingRecommendation(),
+        deviceCapabilities = deviceCapabilities
+    )
 
     override suspend fun respond(request: AgentRequest): AgentResponse {
         val input = request.text.trim()
@@ -19,13 +39,12 @@ class WeatherAgentEngine(
 
         val lowerInput = input.lowercase()
 
-        // 1. Check for Current Location Request
         if (lowerInput.contains("my location") || lowerInput.contains("here") || lowerInput.contains("current location")) {
             val coords = deviceCapabilities?.currentLocation()
             if (coords != null) {
-                return when (val result = weatherRepository.getWeatherForCoordinates(coords.latitude, coords.longitude)) {
+                return when (val result = getWeatherForCurrentLocation(coords)) {
                     is WeatherResult.Success -> {
-                        val speechText = formatWeatherAdvice("your current location", result.snapshot)
+                        val speechText = formatWeatherAdvice(result.snapshot)
                         speakIfSupported(speechText)
                         AgentResponse(text = speechText, action = AgentAction.FetchCurrentLocationWeather)
                     }
@@ -41,12 +60,11 @@ class WeatherAgentEngine(
             }
         }
 
-        // 2. Extract City Name from Input
         val targetCity = extractCityName(input)
         if (targetCity != null) {
-            return when (val result = weatherRepository.getWeatherForCity(targetCity)) {
+            return when (val result = getWeatherForCity(targetCity)) {
                 is WeatherResult.Success -> {
-                    val speechText = formatWeatherAdvice(targetCity, result.snapshot)
+                    val speechText = formatWeatherAdvice(result.snapshot)
                     speakIfSupported(speechText)
                     AgentResponse(text = speechText, action = AgentAction.SearchWeather(targetCity))
                 }
@@ -56,7 +74,6 @@ class WeatherAgentEngine(
             }
         }
 
-        // 3. Fallback / General Advice
         val defaultText = "I can help with weather updates and clothing recommendations! Try asking 'Weather in Chicago' or 'Do I need a jacket in Tokyo?'"
         return AgentResponse(text = defaultText)
     }
@@ -82,20 +99,10 @@ class WeatherAgentEngine(
         return if (cleaned.isNotEmpty() && cleaned.length > 1) cleaned else null
     }
 
-    private fun formatWeatherAdvice(location: String, snapshot: WeatherSnapshot): String {
+    private fun formatWeatherAdvice(snapshot: WeatherSnapshot): String {
         val tempF = snapshot.temperature.toInt()
         val conditionDesc = snapshot.conditions.firstOrNull()?.description ?: "clear skies"
-        val isRainy = conditionDesc.contains("rain") || conditionDesc.contains("drizzle")
-        val isCold = tempF < 55
-
-        val clothingAdvice = when {
-            isRainy && isCold -> "Bring an umbrella and a waterproof jacket!"
-            isRainy -> "Bring an umbrella!"
-            isCold -> "You should wear a warm coat."
-            tempF > 80 -> "It's warm, dress lightly!"
-            else -> "Comfortable weather for outdoors!"
-        }
-
+        val clothingAdvice = getClothingRecommendation(snapshot)
         return "In ${snapshot.city}, it's currently $tempF°F with $conditionDesc. $clothingAdvice"
     }
 }

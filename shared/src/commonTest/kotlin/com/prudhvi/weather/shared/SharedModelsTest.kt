@@ -3,9 +3,9 @@ package com.prudhvi.weather.shared
 import com.prudhvi.weather.shared.agent.AgentAction
 import com.prudhvi.weather.shared.agent.AgentResponse
 import com.prudhvi.weather.shared.config.WhiteLabelConfig
-import com.prudhvi.weather.shared.weather.Coordinates
-import com.prudhvi.weather.shared.weather.WeatherCondition
-import com.prudhvi.weather.shared.weather.WeatherSnapshot
+import com.prudhvi.weather.shared.models.Coordinates
+import com.prudhvi.weather.shared.models.WeatherCondition
+import com.prudhvi.weather.shared.models.WeatherSnapshot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

@@ -1,13 +1,12 @@
 package com.prudhvi.weather.shared.agent
 
-import com.prudhvi.weather.shared.weather.Coordinates
+import com.prudhvi.weather.shared.weather.CurrentLocationProvider
 
 /**
  * Hardware access is represented as a capability so the agent never depends
  * directly on Android or iOS APIs. Each platform supplies its own adapter.
  */
-interface DeviceCapabilities {
-    suspend fun currentLocation(): Coordinates?
+interface DeviceCapabilities : CurrentLocationProvider {
     suspend fun speak(text: String)
     suspend fun openAppSettings()
 }

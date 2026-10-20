@@ -2,9 +2,9 @@ package com.prudhvi.weather.presentation.weather
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.prudhvi.weather.data.WeatherRepository
 import com.prudhvi.weather.data.local.WeatherPreferences
 import com.prudhvi.weather.data.location.CurrentLocationProvider
+import com.prudhvi.weather.shared.weather.WeatherRepository
 
 class WeatherViewModelFactory(
     private val repository: WeatherRepository,

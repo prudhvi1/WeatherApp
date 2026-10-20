@@ -4,11 +4,11 @@ import com.prudhvi.weather.shared.agent.AgentAction
 import com.prudhvi.weather.shared.agent.AgentRequest
 import com.prudhvi.weather.shared.agent.DeviceCapabilities
 import com.prudhvi.weather.shared.agent.WeatherAgentEngine
-import com.prudhvi.weather.shared.weather.Coordinates
-import com.prudhvi.weather.shared.weather.WeatherCondition
+import com.prudhvi.weather.shared.models.Coordinates
+import com.prudhvi.weather.shared.models.WeatherCondition
 import com.prudhvi.weather.shared.weather.WeatherRepository
-import com.prudhvi.weather.shared.weather.WeatherResult
-import com.prudhvi.weather.shared.weather.WeatherSnapshot
+import com.prudhvi.weather.shared.models.WeatherResult
+import com.prudhvi.weather.shared.models.WeatherSnapshot
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,7 +40,7 @@ class WeatherAgentEngineTest {
 
     private class FakeDeviceCapabilities : DeviceCapabilities {
         var spokenText: String? = null
-        override suspend fun currentLocation(): Coordinates = Coordinates(41.8781, -87.6298)
+        override suspend fun currentLocation(): Coordinates? = Coordinates(41.8781, -87.6298)
         override suspend fun speak(text: String) {
             spokenText = text
         }

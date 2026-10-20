@@ -116,16 +116,16 @@ fun WeatherScreen(
             }
 
             is WeatherUiState.Success -> {
-                val response = state.weather
-                val condition = response.weather.firstOrNull()
-                Text(response.name, style = MaterialTheme.typography.headlineSmall)
-                Text(WeatherFormatting.formatTemperature(response.main.temp))
+                val weather = state.weather
+                val condition = weather.conditions.firstOrNull()
+                Text(weather.city, style = MaterialTheme.typography.headlineSmall)
+                Text(WeatherFormatting.formatTemperature(weather.temperature))
                 Text(WeatherFormatting.formatCondition(condition?.description))
                 Text(
                     "Feels like " +
-                        WeatherFormatting.formatTemperature(response.main.feels_like)
+                        WeatherFormatting.formatTemperature(weather.feelsLike)
                 )
-                Text("Humidity ${response.main.humidity}%")
+                Text("Humidity ${weather.humidityPercent}%")
             }
         }
     }

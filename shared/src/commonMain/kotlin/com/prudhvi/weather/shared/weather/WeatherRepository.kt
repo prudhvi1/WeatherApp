@@ -1,23 +1,19 @@
 package com.prudhvi.weather.shared.weather
 
-import com.prudhvi.weather.shared.weather.remote.GeocodingItemDto
-import com.prudhvi.weather.shared.weather.remote.OpenWeatherResponseDto
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
+import com.prudhvi.weather.shared.models.Coordinates
+import com.prudhvi.weather.shared.models.WeatherCondition
+import com.prudhvi.weather.shared.models.WeatherResult
+import com.prudhvi.weather.shared.models.WeatherSnapshot
+import com.prudhvi.weather.shared.weather.remote.OpenWeatherApiClient
 
+/** Source of weather data for the shared domain layer. */
 interface WeatherRepository {
     suspend fun getWeatherForCity(city: String): WeatherResult
     suspend fun getWeatherForCoordinates(latitude: Double, longitude: Double): WeatherResult
 }
 
-class KtorWeatherRepository(
-    private val apiKey: String,
-    private val httpClient: HttpClient = createDefaultHttpClient()
+class KtorWeatherRepository private constructor(
+    private val apiClient: OpenWeatherApiClient
 ) : WeatherRepository {
 
     override suspend fun getWeatherForCity(city: String): WeatherResult {
@@ -27,13 +23,7 @@ class KtorWeatherRepository(
         }
 
         return runCatching {
-            val geocodingResults: List<GeocodingItemDto> = httpClient.get(GEOCODING_URL) {
-                parameter("q", trimmed)
-                parameter("limit", 1)
-                parameter("appid", apiKey)
-            }.body()
-
-            val location = geocodingResults.firstOrNull()
+            val location = apiClient.geocode(trimmed).firstOrNull()
                 ?: return WeatherResult.Failure("We could not find location '$trimmed'")
 
             getWeatherForCoordinates(location.lat, location.lon, locationName = location.name)
@@ -53,12 +43,7 @@ class KtorWeatherRepository(
         locationName: String?
     ): WeatherResult {
         return runCatching {
-            val dto: OpenWeatherResponseDto = httpClient.get(WEATHER_URL) {
-                parameter("lat", latitude)
-                parameter("lon", longitude)
-                parameter("units", "imperial")
-                parameter("appid", apiKey)
-            }.body()
+            val dto = apiClient.currentWeather(latitude, longitude)
 
             val snapshot = WeatherSnapshot(
                 city = locationName ?: dto.name.ifEmpty { "Current Location" },
@@ -81,17 +66,8 @@ class KtorWeatherRepository(
     }
 
     companion object {
-        private const val BASE_URL = "https://api.openweathermap.org"
-        private const val GEOCODING_URL = "$BASE_URL/geo/1.0/direct"
-        private const val WEATHER_URL = "$BASE_URL/data/2.5/weather"
-
-        fun createDefaultHttpClient(): HttpClient = HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                })
-            }
-        }
+        fun create(apiKey: String): KtorWeatherRepository = KtorWeatherRepository(
+            apiClient = OpenWeatherApiClient.create(apiKey)
+        )
     }
 }
