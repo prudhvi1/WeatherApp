@@ -2,12 +2,19 @@ package com.prudhvi.weather
 
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import com.prudhvi.weather.presentation.weather.WeatherNavHost
+import com.prudhvi.weather.presentation.weather.WeatherViewModel
+import com.prudhvi.weather.presentation.weather.WeatherViewModelFactory
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
+    private val weatherViewModel: WeatherViewModel by viewModels {
+        val container = (application as WeatherApplication).appContainer
+        WeatherViewModelFactory(container.weatherRepository)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -20,12 +27,8 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        setContent {
+            WeatherNavHost(viewModel = weatherViewModel)
         }
     }
 
