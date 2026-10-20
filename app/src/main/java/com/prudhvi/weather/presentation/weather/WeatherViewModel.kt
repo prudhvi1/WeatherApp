@@ -1,5 +1,6 @@
 package com.prudhvi.weather.presentation.weather
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prudhvi.weather.data.CityNotFoundException
@@ -48,16 +49,29 @@ class WeatherViewModel(
                 val weather = repository.getWeatherForCity(normalizedCity)
                 _uiState.value = WeatherUiState.Success(weather)
             } catch (exception: CityNotFoundException) {
+                Log.w(TAG, "No geocoding result for city: $normalizedCity")
                 _uiState.value = WeatherUiState.Error("We could not find that city")
             } catch (exception: IOException) {
+                Log.e(TAG, "Network request failed for city: $normalizedCity", exception)
                 _uiState.value = WeatherUiState.Error(
                     "Check your internet connection and try again"
                 )
             } catch (exception: HttpException) {
+                Log.e(
+                    TAG,
+                    "Weather API returned HTTP ${exception.code()} for city: $normalizedCity",
+                    exception
+                )
+                val message = when (exception.code()) {
+                    401 -> "The OpenWeather API key is invalid or not active yet"
+                    429 -> "The weather service request limit was reached"
+                    else -> "Weather service returned an error (${exception.code()})"
+                }
                 _uiState.value = WeatherUiState.Error(
-                    "Weather service returned an error (${exception.code()})"
+                    message
                 )
             } catch (exception: Exception) {
+                Log.e(TAG, "Unexpected weather error for city: $normalizedCity", exception)
                 _uiState.value = WeatherUiState.Error(
                     "Something went wrong. Please try again"
                 )
@@ -67,5 +81,6 @@ class WeatherViewModel(
 
     private companion object {
         const val DEFAULT_CITY = "Chicago"
+        const val TAG = "WeatherViewModel"
     }
 }

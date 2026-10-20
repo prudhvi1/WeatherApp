@@ -37,7 +37,7 @@ fun WeatherScreen(
             value = city,
             onValueChange = { city = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("US city") },
+            label = { Text("US city, e.g. New York") },
             singleLine = true
         )
 

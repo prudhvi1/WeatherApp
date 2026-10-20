@@ -16,7 +16,7 @@ class WeatherRepository(
 
         Log.d(TAG, "Weather lookup requested for city: $normalizedCity")
 
-          val location = geocodingApiService
+        val location = geocodingApiService
             .findLocations(query = normalizedCity, apiKey = apiKey)
             .firstOrNull()
             ?: throw CityNotFoundException(normalizedCity)
@@ -36,5 +36,4 @@ class WeatherRepository(
 
 class CityNotFoundException(city: String) : Exception("No weather location found for $city")
 
-private const val DEFAULT_CITY = "Chicago"
 private const val TAG = "WeatherRepository"
