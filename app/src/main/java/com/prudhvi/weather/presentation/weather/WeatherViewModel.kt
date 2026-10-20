@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.prudhvi.weather.data.CityNotFoundException
 import com.prudhvi.weather.data.WeatherRepository
 import com.prudhvi.weather.data.local.WeatherPreferences
+import com.prudhvi.weather.data.location.LocationPermissionException
+import com.prudhvi.weather.data.location.LocationProvider
+import com.prudhvi.weather.data.location.LocationUnavailableException
 import com.prudhvi.weather.data.remote.model.WeatherResponse
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +33,8 @@ sealed interface WeatherUiState {
 
 class WeatherViewModel(
     private val repository: WeatherRepository,
-    private val weatherPreferences: WeatherPreferences
+    private val weatherPreferences: WeatherPreferences,
+    private val locationProvider: LocationProvider
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
@@ -87,6 +91,49 @@ class WeatherViewModel(
                 )
             }
         }
+    }
+
+    fun fetchCurrentLocation() {
+        viewModelScope.launch {
+            _uiState.value = WeatherUiState.Loading
+
+            try {
+                val location = locationProvider.getCurrentLocation()
+                val weather = repository.getWeatherForCoordinates(
+                    latitude = location.latitude,
+                    longitude = location.longitude
+                )
+                weatherPreferences.saveLastCity(weather.name)
+                _uiState.value = WeatherUiState.Success(
+                    city = weather.name,
+                    weather = weather
+                )
+            } catch (exception: LocationPermissionException) {
+                _uiState.value = WeatherUiState.Error(
+                    "Location permission is required to fetch current weather"
+                )
+            } catch (exception: LocationUnavailableException) {
+                _uiState.value = WeatherUiState.Error(
+                    "Turn on location services and try again"
+                )
+            } catch (exception: IOException) {
+                _uiState.value = WeatherUiState.Error(
+                    "Check your internet connection and try again"
+                )
+            } catch (exception: HttpException) {
+                _uiState.value = WeatherUiState.Error(
+                    "Weather service returned an error (${exception.code()})"
+                )
+            } catch (exception: Exception) {
+                _uiState.value = WeatherUiState.Error(
+                    "Unable to fetch weather for your location"
+                )
+            }
+        }
+    }
+
+    fun showError(message: String) {
+        _uiState.value = WeatherUiState.Error(message)
     }
 
     private companion object {

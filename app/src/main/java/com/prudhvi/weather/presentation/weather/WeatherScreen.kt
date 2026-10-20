@@ -1,5 +1,11 @@
 package com.prudhvi.weather.presentation.weather
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +28,21 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun WeatherScreen(
     uiState: WeatherUiState,
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
+    onFetchCurrentLocation: () -> Unit,
+    onLocationPermissionDenied: () -> Unit
 ) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.any { it }) {
+            onFetchCurrentLocation()
+        } else {
+            onLocationPermissionDenied()
+        }
+    }
+
     var city by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(uiState) {
@@ -54,6 +73,34 @@ fun WeatherScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Search")
+        }
+
+        Button(
+            onClick = {
+                val hasPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                if (hasPermission) {
+                    onFetchCurrentLocation()
+                } else {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )
+                }
+            },
+            enabled = uiState !is WeatherUiState.Loading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Fetch current location")
         }
 
         when (val state = uiState) {

@@ -28,7 +28,11 @@ fun WeatherNavHost(viewModel: WeatherViewModel) {
             composable(WEATHER_ROUTE) {
                 WeatherScreen(
                     uiState = uiState,
-                    onSearch = viewModel::search
+                    onSearch = viewModel::search,
+                    onFetchCurrentLocation = viewModel::fetchCurrentLocation,
+                    onLocationPermissionDenied = {
+                        viewModel.showError("Location permission is required to fetch current weather")
+                    }
                 )
             }
         }

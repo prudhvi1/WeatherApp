@@ -14,7 +14,8 @@ class MainActivity : ComponentActivity() {
         val container = (application as WeatherApplication).appContainer
         WeatherViewModelFactory(
             repository = container.weatherRepository,
-            weatherPreferences = container.weatherPreferences
+            weatherPreferences = container.weatherPreferences,
+            locationProvider = container.locationProvider
         )
     }
 
