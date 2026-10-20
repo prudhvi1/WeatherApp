@@ -1,6 +1,7 @@
 package com.prudhvi.weather.data.location
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
@@ -12,12 +13,22 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class LocationProvider(context: Context) {
+data class UserLocation(
+    val latitude: Double,
+    val longitude: Double
+)
+
+interface CurrentLocationProvider {
+    suspend fun getCurrentLocation(): UserLocation
+}
+
+class LocationProvider(context: Context) : CurrentLocationProvider {
     private val context = context.applicationContext
     private val locationManager =
         this.context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-    suspend fun getCurrentLocation(): Location = suspendCancellableCoroutine { continuation ->
+    @SuppressLint("MissingPermission")
+    override suspend fun getCurrentLocation(): UserLocation = suspendCancellableCoroutine { continuation ->
         if (!hasLocationPermission()) {
             continuation.resumeWithException(LocationPermissionException())
             return@suspendCancellableCoroutine
@@ -39,7 +50,12 @@ class LocationProvider(context: Context) {
         }.getOrNull()
 
         if (lastKnownLocation != null) {
-            continuation.resume(lastKnownLocation)
+            continuation.resume(
+                UserLocation(
+                    latitude = lastKnownLocation.latitude,
+                    longitude = lastKnownLocation.longitude
+                )
+            )
             return@suspendCancellableCoroutine
         }
 
@@ -47,7 +63,12 @@ class LocationProvider(context: Context) {
             override fun onLocationChanged(location: Location) {
                 locationManager.removeUpdates(this)
                 if (continuation.isActive) {
-                    continuation.resume(location)
+                    continuation.resume(
+                        UserLocation(
+                            latitude = location.latitude,
+                            longitude = location.longitude
+                        )
+                    )
                 }
             }
         }
@@ -60,7 +81,7 @@ class LocationProvider(context: Context) {
                 listener,
                 Looper.getMainLooper()
             )
-        } catch (exception: SecurityException) {
+        } catch (_: SecurityException) {
             continuation.resumeWithException(LocationPermissionException())
         }
 
@@ -70,14 +91,15 @@ class LocationProvider(context: Context) {
     }
 
     private fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
+        val fineGranted = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        return fineGranted || coarseGranted
     }
 
     private companion object {

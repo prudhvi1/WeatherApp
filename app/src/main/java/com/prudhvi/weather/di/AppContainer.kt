@@ -2,7 +2,9 @@ package com.prudhvi.weather.di
 
 import android.content.Context
 import com.prudhvi.weather.data.WeatherRepository
+import com.prudhvi.weather.data.local.DataStoreWeatherPreferences
 import com.prudhvi.weather.data.local.WeatherPreferences
+import com.prudhvi.weather.data.location.CurrentLocationProvider
 import com.prudhvi.weather.data.location.LocationProvider
 import com.prudhvi.weather.data.remote.GeocodingApiService
 import com.prudhvi.weather.data.remote.WeatherApiService
@@ -24,12 +26,12 @@ class AppContainer(
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 ) {
-    val locationProvider: LocationProvider by lazy {
+    val locationProvider: CurrentLocationProvider by lazy {
         LocationProvider(context)
     }
 
     val weatherPreferences: WeatherPreferences by lazy {
-        WeatherPreferences(context)
+        DataStoreWeatherPreferences(context)
     }
 
     val weatherApiService: WeatherApiService by lazy {

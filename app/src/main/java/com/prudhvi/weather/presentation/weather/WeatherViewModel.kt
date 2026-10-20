@@ -1,13 +1,12 @@
 package com.prudhvi.weather.presentation.weather
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.prudhvi.weather.data.CityNotFoundException
 import com.prudhvi.weather.data.WeatherRepository
 import com.prudhvi.weather.data.local.WeatherPreferences
 import com.prudhvi.weather.data.location.LocationPermissionException
-import com.prudhvi.weather.data.location.LocationProvider
+import com.prudhvi.weather.data.location.CurrentLocationProvider
 import com.prudhvi.weather.data.location.LocationUnavailableException
 import com.prudhvi.weather.data.remote.model.WeatherResponse
 import java.io.IOException
@@ -34,7 +33,7 @@ sealed interface WeatherUiState {
 class WeatherViewModel(
     private val repository: WeatherRepository,
     private val weatherPreferences: WeatherPreferences,
-    private val locationProvider: LocationProvider
+    private val locationProvider: CurrentLocationProvider
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
@@ -63,19 +62,12 @@ class WeatherViewModel(
                     weather = weather
                 )
             } catch (exception: CityNotFoundException) {
-                Log.w(TAG, "No geocoding result for city: $normalizedCity")
                 _uiState.value = WeatherUiState.Error("We could not find that city")
             } catch (exception: IOException) {
-                Log.e(TAG, "Network request failed for city: $normalizedCity", exception)
                 _uiState.value = WeatherUiState.Error(
                     "Check your internet connection and try again"
                 )
             } catch (exception: HttpException) {
-                Log.e(
-                    TAG,
-                    "Weather API returned HTTP ${exception.code()} for city: $normalizedCity",
-                    exception
-                )
                 val message = when (exception.code()) {
                     401 -> "The OpenWeather API key is invalid or not active yet"
                     429 -> "The weather service request limit was reached"
@@ -85,7 +77,6 @@ class WeatherViewModel(
                     message
                 )
             } catch (exception: Exception) {
-                Log.e(TAG, "Unexpected weather error for city: $normalizedCity", exception)
                 _uiState.value = WeatherUiState.Error(
                     "Something went wrong. Please try again"
                 )
@@ -138,6 +129,5 @@ class WeatherViewModel(
 
     private companion object {
         const val DEFAULT_CITY = "Chicago"
-        const val TAG = "WeatherViewModel"
     }
 }

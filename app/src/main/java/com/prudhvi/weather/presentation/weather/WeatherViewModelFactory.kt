@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.prudhvi.weather.data.WeatherRepository
 import com.prudhvi.weather.data.local.WeatherPreferences
-import com.prudhvi.weather.data.location.LocationProvider
+import com.prudhvi.weather.data.location.CurrentLocationProvider
 
 class WeatherViewModelFactory(
     private val repository: WeatherRepository,
     private val weatherPreferences: WeatherPreferences,
-    private val locationProvider: LocationProvider
+    private val locationProvider: CurrentLocationProvider
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

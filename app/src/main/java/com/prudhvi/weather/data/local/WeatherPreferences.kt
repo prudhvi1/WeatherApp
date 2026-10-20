@@ -13,10 +13,16 @@ import kotlinx.coroutines.flow.map
 
 private val Context.weatherDataStore by preferencesDataStore(name = "weather_preferences")
 
-class WeatherPreferences(
+interface WeatherPreferences {
+    val lastCity: Flow<String?>
+
+    suspend fun saveLastCity(city: String)
+}
+
+class DataStoreWeatherPreferences(
     private val context: Context
-) {
-    val lastCity: Flow<String?> = context.weatherDataStore.data
+) : WeatherPreferences {
+    override val lastCity: Flow<String?> = context.weatherDataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -28,7 +34,7 @@ class WeatherPreferences(
             preferences[LAST_CITY]
         }
 
-    suspend fun saveLastCity(city: String) {
+    override suspend fun saveLastCity(city: String) {
         context.weatherDataStore.edit { preferences ->
             preferences[LAST_CITY] = city
         }
