@@ -11,9 +11,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/agent_assist_svgrepo_com"
+        android:icon="@drawable/weather_svgrepo_com"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/agent_assist_svgrepo_com"
+        android:roundIcon="@drawable/weather_svgrepo_com"
         android:supportsRtl="true"
         android:theme="@style/Theme.WeatherApp">
         <activity
