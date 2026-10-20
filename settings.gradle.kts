@@ -25,4 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "WeatherWhiteLabelAgent"
 include(":app")
 include(":shared")
+include(":WeatherAppA")
  

@@ -1,27 +1,11 @@
 package com.prudhvi.weather
 
-import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import com.prudhvi.weather.presentation.weather.WeatherNavHost
-import com.prudhvi.weather.presentation.weather.WeatherViewModel
-import com.prudhvi.weather.presentation.weather.WeatherViewModelFactory
 
-class MainActivity : ComponentActivity() {
-    private val weatherViewModel: WeatherViewModel by viewModels {
-        val container = (application as WeatherApplication).appContainer
-        WeatherViewModelFactory(
-            repository = container.weatherRepository,
-            weatherPreferences = container.weatherPreferences,
-            locationProvider = container.locationProvider
-        )
-    }
+class MainActivity : BaseWeatherActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
+    override fun onResume() {
+        super.onResume()
         if (BuildConfig.DEBUG) {
             Log.d(
                 TAG,
@@ -31,9 +15,6 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        setContent {
-            WeatherNavHost(viewModel = weatherViewModel)
-        }
     }
 
     private companion object {

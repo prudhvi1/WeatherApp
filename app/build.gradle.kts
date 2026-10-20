@@ -1,6 +1,7 @@
 import java.util.Properties
+
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.compose.compiler)
 }
 val localProperties = Properties()
@@ -13,24 +14,14 @@ val openWeatherApiKey = localProperties.getProperty("OPENWEATHER_API_KEY", "")
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
-
-
 android {
     namespace = "com.prudhvi.weather"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.prudhvi.weather"
         minSdk = 24
-        targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Keep the key in local.properties so it is never committed to source control.
         buildConfigField("String", "OPENWEATHER_API_KEY", "\"$openWeatherApiKey\"")
     }
 
@@ -54,6 +45,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.activity.compose)
@@ -76,4 +68,5 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    debugImplementation(libs.leakcanary)
 }
