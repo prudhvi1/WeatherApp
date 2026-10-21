@@ -1,5 +1,11 @@
+import OSLog
 import SwiftUI
 import Shared
+
+private let viewLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "IOSApp",
+    category: "WeatherUI"
+)
 
 struct ContentView: View {
     @StateObject private var viewModel = WeatherViewModel()
@@ -40,16 +46,19 @@ struct ContentView: View {
                 .textInputAutocapitalization(.words)
                 .submitLabel(.search)
                 .onSubmit {
+                    viewLogger.info("Search submitted from keyboard for city: \(city, privacy: .public)")
                     viewModel.search(city: city)
                 }
 
             HStack {
                 Button("Search") {
+                    viewLogger.info("Search button tapped for city: \(city, privacy: .public)")
                     viewModel.search(city: city)
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("Current Location") {
+                    viewLogger.info("Current Location button tapped")
                     viewModel.fetchCurrentLocation()
                 }
                 .buttonStyle(.bordered)

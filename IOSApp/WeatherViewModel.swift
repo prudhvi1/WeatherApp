@@ -1,7 +1,13 @@
 import Combine
 import CoreLocation
 import Foundation
+import OSLog
 import Shared
+
+private let weatherLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "IOSApp",
+    category: "Weather"
+)
 
 @MainActor
 final class WeatherViewModel: NSObject, ObservableObject {
@@ -24,25 +30,35 @@ final class WeatherViewModel: NSObject, ObservableObject {
             locationProvider: provider
         )
         super.init()
+        weatherLogger.debug("WeatherViewModel initialized")
     }
 
     func search(city: String) {
         let city = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        weatherLogger.info("Search requested for city: \(city, privacy: .public)")
         guard !city.isEmpty else {
             errorMessage = "Enter a city name"
             return
         }
 
         beginLoading()
+        weatherLogger.debug("Starting weather request for city")
         getWeatherForCity.invoke(city: city) { [weak self] result, error in
             Task { @MainActor in
+                if let error {
+                    weatherLogger.error("Weather request callback returned an error: \(error.localizedDescription, privacy: .public)")
+                } else {
+                    weatherLogger.debug("Weather request callback returned a result")
+                }
                 self?.finish(result: result, error: error)
             }
         }
     }
 
     func fetchCurrentLocation() {
+        weatherLogger.info("Current Location button action started")
         beginLoading()
+        weatherLogger.debug("Requesting location permission or current location")
         locationProvider.requestPermissionIfNeeded()
         getWeatherForCurrentLocation.invoke { [weak self] result, error in
             Task { @MainActor in
@@ -57,14 +73,17 @@ final class WeatherViewModel: NSObject, ObservableObject {
     }
 
     private func beginLoading() {
+        weatherLogger.debug("Setting loading state to true")
         isLoading = true
         errorMessage = nil
     }
 
     private func finish(result: WeatherResult?, error: Error?) {
+        weatherLogger.debug("Finishing weather request")
         isLoading = false
 
         if let error {
+            weatherLogger.error("Weather request failed: \(error.localizedDescription, privacy: .public)")
             errorMessage = error.localizedDescription
             return
         }
@@ -75,9 +94,11 @@ final class WeatherViewModel: NSObject, ObservableObject {
         }
 
         if let success = result as? WeatherResultSuccess {
+            weatherLogger.info("Weather request succeeded for city: \(success.snapshot.city, privacy: .public)")
             weather = success.snapshot
             errorMessage = nil
         } else if let failure = result as? WeatherResultFailure {
+            weatherLogger.error("Weather service returned failure: \(failure.message, privacy: .public)")
             errorMessage = userMessage(for: failure.message)
         } else {
             errorMessage = "Something went wrong. Please try again"
