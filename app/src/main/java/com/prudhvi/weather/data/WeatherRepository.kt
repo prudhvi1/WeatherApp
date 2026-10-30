@@ -13,6 +13,8 @@ class WeatherRepository(
         val normalizedCity = city.trim()
         require(normalizedCity.isNotEmpty()) { "City name cannot be empty" }
 
+        // Keep the search flow simple by using the top geocoding match. If users
+        // need to disambiguate cities, return the matches and let them choose.
         val location = geocodingApiService
             .findLocations(query = normalizedCity, apiKey = apiKey)
             .firstOrNull()

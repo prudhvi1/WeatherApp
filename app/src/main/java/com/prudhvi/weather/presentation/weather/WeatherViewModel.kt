@@ -10,6 +10,8 @@ import com.prudhvi.weather.data.location.CurrentLocationProvider
 import com.prudhvi.weather.data.location.LocationUnavailableException
 import com.prudhvi.weather.data.remote.model.WeatherResponse
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +24,8 @@ sealed interface WeatherUiState {
 
     data class Success(
         val city: String,
-        val weather: WeatherResponse
+        val weather: WeatherResponse,
+        val iconUrl: String?
     ) : WeatherUiState
 
     data class Error(
@@ -38,96 +41,125 @@ class WeatherViewModel(
     private val _uiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
 
+    // A newer search or location request supersedes the older one.
+    private var weatherJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            search(weatherPreferences.lastCity.first() ?: DEFAULT_CITY)
+        // Restore the last searched city; use the default on a fresh install.
+        weatherJob = viewModelScope.launch {
+            val initialCity = weatherPreferences.lastCity.first() ?: DEFAULT_CITY
+            loadWeatherForCity(initialCity)
         }
     }
 
     fun search(city: String = DEFAULT_CITY) {
         val normalizedCity = city.trim()
+        weatherJob?.cancel()
         if (normalizedCity.isEmpty()) {
+            weatherJob = null
             _uiState.value = WeatherUiState.Error("Enter a city name")
             return
         }
 
-        viewModelScope.launch {
-            _uiState.value = WeatherUiState.Loading
-
-            try {
-                val weather = repository.getWeatherForCity(normalizedCity)
-                weatherPreferences.saveLastCity(normalizedCity)
-                _uiState.value = WeatherUiState.Success(
-                    city = normalizedCity,
-                    weather = weather
-                )
-            } catch (exception: CityNotFoundException) {
-                _uiState.value = WeatherUiState.Error("We could not find that city")
-            } catch (exception: IOException) {
-                _uiState.value = WeatherUiState.Error(
-                    "Check your internet connection and try again"
-                )
-            } catch (exception: HttpException) {
-                val message = when (exception.code()) {
-                    401 -> "The OpenWeather API key is invalid or not active yet"
-                    429 -> "The weather service request limit was reached"
-                    else -> "Weather service returned an error (${exception.code()})"
-                }
-                _uiState.value = WeatherUiState.Error(
-                    message
-                )
-            } catch (exception: Exception) {
-                _uiState.value = WeatherUiState.Error(
-                    "Something went wrong. Please try again"
-                )
-            }
+        weatherJob = viewModelScope.launch {
+            loadWeatherForCity(normalizedCity)
         }
     }
 
     fun fetchCurrentLocation() {
-        viewModelScope.launch {
-            _uiState.value = WeatherUiState.Loading
+        weatherJob?.cancel()
+        weatherJob = viewModelScope.launch {
+            loadWeatherForCurrentLocation()
+        }
+    }
 
-            try {
-                val location = locationProvider.getCurrentLocation()
-                val weather = repository.getWeatherForCoordinates(
-                    latitude = location.latitude,
-                    longitude = location.longitude
-                )
-                weatherPreferences.saveLastCity(weather.name)
-                _uiState.value = WeatherUiState.Success(
-                    city = weather.name,
-                    weather = weather
-                )
-            } catch (exception: LocationPermissionException) {
-                _uiState.value = WeatherUiState.Error(
-                    "Location permission is required to fetch current weather"
-                )
-            } catch (exception: LocationUnavailableException) {
-                _uiState.value = WeatherUiState.Error(
-                    "Turn on location services and try again"
-                )
-            } catch (exception: IOException) {
-                _uiState.value = WeatherUiState.Error(
-                    "Check your internet connection and try again"
-                )
-            } catch (exception: HttpException) {
-                _uiState.value = WeatherUiState.Error(
-                    "Weather service returned an error (${exception.code()})"
-                )
-            } catch (exception: Exception) {
-                _uiState.value = WeatherUiState.Error(
-                    "Unable to fetch weather for your location"
-                )
+    private suspend fun loadWeatherForCity(city: String) {
+        _uiState.value = WeatherUiState.Loading
+
+        try {
+            val weather = repository.getWeatherForCity(city)
+            weatherPreferences.saveLastCity(city)
+            _uiState.value = successState(city, weather)
+        } catch (exception: CityNotFoundException) {
+            _uiState.value = WeatherUiState.Error("We could not find that city")
+        } catch (exception: IOException) {
+            _uiState.value = WeatherUiState.Error(
+                "Check your internet connection and try again"
+            )
+        } catch (exception: HttpException) {
+            val message = when (exception.code()) {
+                401 -> "The OpenWeather API key is invalid or not active yet"
+                429 -> "The weather service request limit was reached"
+                else -> "Weather service returned an error (${exception.code()})"
             }
+            _uiState.value = WeatherUiState.Error(message)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            _uiState.value = WeatherUiState.Error(
+                "Something went wrong. Please try again"
+            )
+        }
+    }
+
+    private suspend fun loadWeatherForCurrentLocation() {
+        _uiState.value = WeatherUiState.Loading
+
+        try {
+            val location = locationProvider.getCurrentLocation()
+            val weather = repository.getWeatherForCoordinates(
+                latitude = location.latitude,
+                longitude = location.longitude
+            )
+            weatherPreferences.saveLastCity(weather.name)
+            _uiState.value = successState(weather.name, weather)
+        } catch (exception: LocationPermissionException) {
+            _uiState.value = WeatherUiState.Error(
+                "Location permission is required to fetch current weather"
+            )
+        } catch (exception: LocationUnavailableException) {
+            _uiState.value = WeatherUiState.Error(
+                "Turn on location services and try again"
+            )
+        } catch (exception: IOException) {
+            _uiState.value = WeatherUiState.Error(
+                "Check your internet connection and try again"
+            )
+        } catch (exception: HttpException) {
+            _uiState.value = WeatherUiState.Error(
+                "Weather service returned an error (${exception.code()})"
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            _uiState.value = WeatherUiState.Error(
+                "Unable to fetch weather for your location"
+            )
         }
     }
 
     fun showError(message: String) {
+        weatherJob?.cancel()
+        weatherJob = null
         _uiState.value = WeatherUiState.Error(message)
     }
 
+    private fun successState(city: String, weather: WeatherResponse): WeatherUiState.Success {
+        val iconCode = weather.weather.firstOrNull()?.icon
+            ?.takeIf { it.isNotBlank() }
+        val iconUrl = iconCode?.let { "$WEATHER_ICON_BASE_URL/${it}@2x.png" }
+
+        return WeatherUiState.Success(
+            city = city,
+            weather = weather,
+            iconUrl = iconUrl
+        )
+    }
+
+
+
     private companion object {
         const val DEFAULT_CITY = "Chicago"
+        const val WEATHER_ICON_BASE_URL = "https://openweathermap.org/img/wn"
     }
 }

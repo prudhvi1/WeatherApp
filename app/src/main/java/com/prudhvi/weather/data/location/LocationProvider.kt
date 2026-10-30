@@ -34,6 +34,7 @@ class LocationProvider(context: Context) : CurrentLocationProvider {
             return@suspendCancellableCoroutine
         }
 
+        // Prefer the lower-power network provider; use GPS only when it is unavailable.
         val provider = when {
             locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ->
                 LocationManager.NETWORK_PROVIDER
@@ -45,6 +46,7 @@ class LocationProvider(context: Context) : CurrentLocationProvider {
             }
         }
 
+        // A cached fix is fast, but may be stale; request an update only when none exists.
         val lastKnownLocation = runCatching {
             locationManager.getLastKnownLocation(provider)
         }.getOrNull()
